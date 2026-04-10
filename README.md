@@ -36,7 +36,7 @@ The current architecture strictly separates the **Model Training** phase from th
 * `TECHNIQUE` (defaults to `"regression"`): The modeling technique to use. Accepts `"regression"` or `"classification"`.
 * `BASELINE_MODEL` (defaults to `""`): The filename of a pre-trained `.joblib` model in the workspace. 
 * `SAVE_BASELINE_MODEL` (defaults to `false`): Set to `true` to export or overwrite the trained `.joblib` model to the workspace.
-* `THRESHOLD` (defaults to `0.5`): A float used to split regression probabilities into a binary 0/1 map.
+* `THRESHOLD` (defaults to `0.5`): A float used to split flood probabilities into a binary flood 0/1 map.
 
 #### Hydrology
 * `COMPUTE_TWI` (defaults to `false`): Set to `true` to calculate the Topographic Wetness Index from the DEM.
