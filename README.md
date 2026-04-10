@@ -63,7 +63,7 @@ To test the model's accuracy on a specific historical date and generate visual m
 * *Result*: The app skips the training phase, extracts data exclusively for the test date, evaluates it against the model, and exports the predicted 2D GeoTIFF maps.
 
 **3. Operational Mode (Future Forecasting)**
-To predict upcoming flood risk using GFS meteorological forecasts:
+To predict upcoming flood using GFS meteorological forecasts:
 * Set `"OPERATIONAL": true`.
 * Set `"FORECAST_DATETIME"` to the target time (e.g., `"2026-04-01 19:00"`).
 * Provide your trained model in `"BASELINE_MODEL"`.
