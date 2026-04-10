@@ -39,9 +39,9 @@ The current architecture strictly separates the **Model Training** phase from th
 * `THRESHOLD` (defaults to `0.5`): A float used to split flood probabilities into a binary flood 0/1 map.
 
 #### Hydrology
-* `COMPUTE_TWI` (defaults to `false`): Set to `true` to calculate the Topographic Wetness Index from the DEM.
+* `COMPUTE_TWI` (defaults to `false`): Set to `true` to calculate the Topographic Wetness Index (TWI) from the DEM.
 * `TWI_MAP` (defaults to `""`): The filename of a pre-computed TWI map in the workspace. 
-* `COMPUTE_HAND` (defaults to `false`): Set to `true` to calculate Height Above Nearest Drainage from the DEM.
+* `COMPUTE_HAND` (defaults to `false`): Set to `true` to calculate Height Above Nearest Drainage (HAND) from the DEM.
 * `HAND_MAP` (defaults to `""`): The filename of a pre-computed HAND map in the workspace. 
 * `MIN_ACC_VALUE_HAND` (defaults to `800`): The flow accumulation threshold used to define drainage channels for the HAND calculation.
 
