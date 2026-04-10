@@ -19,9 +19,9 @@ The current architecture strictly separates the **Model Training** phase from th
 ### Parameters
 
 #### Required
-* `BASENAME_FLOODMAP`: The common prefix string identifying the target flood maps in your workspace (e.g., `"PWThies"`).
-* `SUFFIX_FLOODMAP`: The suffix string identifying the target flood maps (e.g., `"_flood.tif"`).
-* `BASENAME_IMERG`: The common prefix string identifying the cumulative IMERG rainfall maps (e.g., `"Thies_Cumulative_"`).
+* `BASENAME_FLOODMAP`: The prefix string identifying the flood maps in your workspace to be used for training (e.g., `"PWThies"`).
+* `SUFFIX_FLOODMAP`: The suffix string identifying the flood maps in your workspace to be used for training (e.g., `"_flood.tif"`).
+* `BASENAME_IMERG`: The prefix string identifying the cumulative IMERG rainfall maps (e.g., `"Thies_Cumulative_"`).
 * `DEM`: The exact filename of the Digital Elevation Model in your workspace to be used for terrain analysis (e.g., `"Thies_DEM15m.tif"`).
 * `LULC_MAP`: The exact filename of the Land Use map (e.g., `"Thies_LULC.tif"`).
 
