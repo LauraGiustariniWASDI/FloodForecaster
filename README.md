@@ -1,6 +1,6 @@
 ## Overview
 
-The `flood_forecaster` processor is an advanced spatial machine learning pipeline that predicts and maps flood inundation risk at a high-resolution pixel level. It combines physical terrain characteristics derived from a Digital Elevation Model (DEM), Land Use/Land Cover (LULC) data, and multi-temporal satellite rainfall data (IMERG/GFS) to train and deploy highly optimized predictive models. 
+The `flood_forecaster` processor is an advanced spatial machine learning pipeline that predicts and maps flood inundation at a high-resolution pixel level. It combines physical terrain characteristics derived from a Digital Elevation Model (DEM), Land Use/Land Cover (LULC) data, and multi-temporal satellite rainfall data (IMERG/GFS) to train and deploy highly optimized predictive models. 
 
 The current architecture strictly separates the **Model Training** phase from the **Testing/Operational** phase, and introduces a robust physics engine and data augmentation to handle the inherent uncertainties of meteorological forecasts.
 
