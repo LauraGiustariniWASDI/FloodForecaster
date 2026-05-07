@@ -1,0 +1,16 @@
+{
+    "BASE_NAME": "Thies",
+    "BBOX": {
+        "northEast": {
+            "lat": 15.3,
+            "lng": -16.6
+        },
+        "southWest": {
+            "lat": 14.3,
+            "lng": -17.6
+        }
+    },
+    "TARGET_DATETIME": "2026-03-19 16:00",
+    "CUMULATION_PERIODS": "1hr,3hr,6hr,12hr,24hr",
+    "DELETE": true
+}
