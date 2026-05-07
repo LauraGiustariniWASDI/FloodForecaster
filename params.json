@@ -1,7 +1,6 @@
 {
   "BASENAME_FLOODMAP": "PWThies",
   "SUFFIX_FLOODMAP": "_flood.tif",
-  "LIST_MAPS_WITH_FLOOD": "ListInputFloodMaps.txt",
   "BASENAME_IMERG": "Thies_Cumulative_",
   "DEM": "Thies_DEM15m.tif",
   "COMPUTE_TWI": false,
@@ -11,15 +10,16 @@
   "MIN_ACC_VALUE_HAND": 800,
   "LULC_MAP": "Thies_LULC.tif",
   "FILL_DEM": false,
+  "ZONE_SIZE_PIXELS": 33,
   "ALGORITHM": "xgboost",
-  "TECHNIQUE": "regression",
-  "BASELINE_MODEL": "PWThies_XGB_v1_model.joblib",
+  "THRESHOLD": 0.6,
+  "LIST_MAPS_WITH_FLOOD": "ListInputFloodMaps_Cleaned300.txt",
+  "START_MAP_INDEX": 1,
+  "END_MAP_INDEX": null,
+  "BASELINE_MODEL": "PWThies_zonal_baseline_model_Cleaned300.joblib",
   "SAVE_BASELINE_MODEL": false,
-  "THRESHOLD": 0.5,
   "OPERATIONAL": true,
   "REPROCESS_ALL": false,
-  "TEST_DATE": "",
-  "FORECAST_DATETIME": "2026-04-01 19:00",
-  "START_MAP_INDEX": 1,
-  "END_MAP_INDEX": null
+  "FORECAST_DATETIME": "2020-09-12 19:00",
+  "TEST_DATE": ""
 }
