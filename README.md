@@ -34,6 +34,7 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 * `SAVE_BASELINE_MODEL` (defaults to `false`): Set to `true` to export the trained `.joblib` model to the workspace.
 * `THRESHOLD` (defaults to `0.25`): The probability threshold used specifically for generating confusion matrix metrics in the JSON payload. 
 * `LIST_MAPS_WITH_FLOOD` (defaults to `""`): The filename of a text list specifying exact flood maps to use.
+* `OUTPUT_FILENAME` (defaults to `""`): The custom name for the exported prediction map. If left blank, defaults to `{BASENAME}_{DATE}_PredictedFlood.tif`.
 
 #### Hydrology & LULC
 * `COMPUTE_TWI` (defaults to `false`): Set to `true` to calculate the Topographic Wetness Index from the DEM.
@@ -69,7 +70,7 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 
 **Workspace Files**:
 * **Cached Model**: `{BASENAME_FLOODMAP}_zonal_baseline_model.joblib`
-* **Predicted Flood Map**: A structured 2D array projected back to the original map boundaries: `{BASENAME}_{DATE}_ZonalFloatFlood.tif` (Float32 Probabilities).
+* **Predicted Flood Map**: A structured 2D array projected back to the original map boundaries: `{BASENAME}_{DATE}_PredictedFlood.tif` (Float32 Probabilities).
 * **Hydrology Maps**: Newly generated TWI/HAND maps (if requested).
 
 ### JSON Sample
@@ -99,7 +100,8 @@ Operational Forecast Example
   "OPERATIONAL": true,
   "REPROCESS_ALL": false,
   "FORECAST_DATETIME": "2020-09-12 19:00",
-  "TEST_DATE": ""
+  "TEST_DATE": "",
+  "OUTPUT_FILENAME": ""
 }
 ```
 ```
