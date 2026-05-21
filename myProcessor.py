@@ -17,14 +17,15 @@ import glob
 
 def run():
 
-    wasdi.wasdiLog("START: Flood Forecaster Zonal v.2.0.5")
+    wasdi.wasdiLog("START: Flood Forecaster Zonal v.2.0.6")
     aoPayload = {}
 
     try:
         sBasenamefloodmap = wasdi.getParameter("BASENAME_FLOODMAP", "PWThies") 
         sSuffixfloodmap = wasdi.getParameter("SUFFIX_FLOODMAP", "_flood.tif") 
         sBasenameimerg = wasdi.getParameter("BASENAME_IMERG", "Thies_Cumulative_") 
-        
+        sOutputFilename = wasdi.getParameter("OUTPUT_FILENAME", "")
+
         # ZONAL AGGREGATION PARAMETER
         iZoneSize = int(wasdi.getParameter("ZONE_SIZE_PIXELS", 33)) # 33 pixels * 15m = ~495m zones
         
@@ -629,9 +630,21 @@ def run():
 
                     del X_test_map
 
-                sPredictedFloatFloodMap = f"{sBasenamefloodmap}_{sUniqueDate}_ZonalFloatFlood.tif"
+                if sOutputFilename != "":
+                    # Ensure the user's custom name ends with .tif
+                    sPredictedFloatFloodMap = sOutputFilename if sOutputFilename.endswith(".tif") else f"{sOutputFilename}.tif"
+                    
+                    # Failsafe: If processing a batch of maps, append the date so they don't overwrite each other
+                    if len(asFloodMaps) > 1 and not bOperationalMode:
+                        sPredictedFloatFloodMap = sPredictedFloatFloodMap.replace(".tif", f"_{sUniqueDate}.tif")
+                else:
+                    # The Default Naming Convention
+                    sPredictedFloatFloodMap = f"{sBasenamefloodmap}_{sUniqueDate}_PredictedFlood.tif"
+                
+                # Create and save the GeoTIFF
                 oDriver = gdal.GetDriverByName("GTiff")
                 oOutputMap = oDriver.Create(wasdi.getPath(sPredictedFloatFloodMap), iCols, iRows, 1, gdal.GDT_Float32, ['COMPRESS=LZW', 'BIGTIFF=YES'])
+
                 oOutputMap.SetGeoTransform(oFloodMapTemp.GetGeoTransform())
                 oOutputMap.SetProjection(oFloodMapTemp.GetProjection())
                 oOutputMap.GetRasterBand(1).WriteArray(afPredictedFloatFloodMap)
