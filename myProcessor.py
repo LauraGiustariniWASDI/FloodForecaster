@@ -17,7 +17,7 @@ import glob
 
 def run():
 
-    wasdi.wasdiLog("START: Flood Forecaster Zonal v.2.0.6")
+    wasdi.wasdiLog("START: Flood Forecaster Zonal v.2.0.8")
     aoPayload = {}
 
     try:
@@ -401,31 +401,38 @@ def run():
             asFeatureNames.extend(['LULC_Trees', 'LULC_ShrubGrass', 'LULC_Crop', 'LULC_BuiltUp', 'LULC_Bare', 'LULC_WaterWetland'])
         asFeatureNames.extend(["RainCum_1hr", "RainCum_3hr", "RainCum_6hr", "RainCum_12hr", "RainCum_24hr"])
 
-        if sModelBaselineJoblib == "":
-            wasdi.wasdiLog(f"Initializing new {sAlgorithm} regression model with Zonal Aggregation...")
-            if not bIsXGBoost:
-                iTotalBatches = max(1, (len(asTrainParquetFiles) + BATCH_SIZE - 1) // BATCH_SIZE)
-                iTreesPerBatch = max(5, int(200 / iTotalBatches)) 
-                params = {"n_estimators": 0, "max_features": "sqrt", "max_depth": 15, "min_samples_split": 5, "min_samples_leaf": 4, "bootstrap": False, "warm_start": True, "random_state": 42, "n_jobs": -1}
-                oModel = RandomForestRegressor(**params)
-            else:
-                params = {"n_estimators": 50, "max_depth": 7, "learning_rate": 0.1, "subsample": 0.8, "colsample_bytree": 0.8, "random_state": 42, "n_jobs": -1}
-                
-                # MONOTONIC CONSTRAINTS
-                dict_constraints = {}
-                for sFeat in asFeatureNames:
-                    if "RainCum" in sFeat or "TWI" in sFeat or "Interaction" in sFeat:
-                        dict_constraints[sFeat] = 1   # Positive: Value goes up -> Risk goes up
-                    elif "HAND" in sFeat or "DEM" in sFeat:
-                        dict_constraints[sFeat] = -1  # Negative: Value goes up -> Risk goes down
-                    else:
-                        dict_constraints[sFeat] = 0   # LULC: Neutral constraint
-                params["monotone_constraints"] = dict_constraints
-                
-                oModel = XGBRegressor(**params)
+        # Check if the requested model actually exists on disk
+        bModelExists = os.path.exists(wasdi.getPath(sModelBaselineJoblib)) if sModelBaselineJoblib != "" else False
+
+        if sModelBaselineJoblib == "" or not bModelExists:
+            if sModelBaselineJoblib != "":
+                wasdi.wasdiLog(f"Model '{sModelBaselineJoblib}' not found. Initializing a fresh model to save under this name.")
+
+                wasdi.wasdiLog(f"Initializing new {sAlgorithm} regression model with Zonal Aggregation...")
+                if not bIsXGBoost:
+                    iTotalBatches = max(1, (len(asTrainParquetFiles) + BATCH_SIZE - 1) // BATCH_SIZE)
+                    iTreesPerBatch = max(5, int(200 / iTotalBatches)) 
+                    params = {"n_estimators": 0, "max_features": "sqrt", "max_depth": 15, "min_samples_split": 5, "min_samples_leaf": 4, "bootstrap": False, "warm_start": True, "random_state": 42, "n_jobs": -1}
+                    oModel = RandomForestRegressor(**params)
+                else:
+                    params = {"n_estimators": 50, "max_depth": 7, "learning_rate": 0.1, "subsample": 0.8, "colsample_bytree": 0.8, "random_state": 42, "n_jobs": -1}
+                    
+                    # MONOTONIC CONSTRAINTS
+                    dict_constraints = {}
+                    for sFeat in asFeatureNames:
+                        if "RainCum" in sFeat or "TWI" in sFeat or "Interaction" in sFeat:
+                            dict_constraints[sFeat] = 1   # Positive: Value goes up -> Risk goes up
+                        elif "HAND" in sFeat or "DEM" in sFeat:
+                            dict_constraints[sFeat] = -1  # Negative: Value goes up -> Risk goes down
+                        else:
+                            dict_constraints[sFeat] = 0   # LULC: Neutral constraint
+                    params["monotone_constraints"] = dict_constraints
+                    
+                    oModel = XGBRegressor(**params)
         else:
+            wasdi.wasdiLog(f"Loading existing baseline model: {sModelBaselineJoblib}")
             oModel = joblib.load(wasdi.getPath(sModelBaselineJoblib))
-            if not bIsXGBoost: iTreesPerBatch = 10 
+            if not bIsXGBoost: iTreesPerBatch = 10
 
         if len(asTrainParquetFiles) > 0:
             columns_to_drop = ['FloodedNonFlooded', 'Date', 'PosX', 'PosY', 'Zone_X', 'Zone_Y']
@@ -503,18 +510,29 @@ def run():
                     oModel.n_estimators += iTreesPerBatch
                     oModel.fit(X_batch_final, np.ravel(y_batch_final))
                 else:
-                    if i == 0 and sModelBaselineJoblib == "":
+                    # If this is the very first batch AND we did NOT load an existing model from disk
+                    if i == 0 and not bModelExists:
                         oModel.fit(X_batch_final, np.ravel(y_batch_final)) 
                     else:
-                        oModel.fit(X_batch_final, np.ravel(y_batch_final), xgb_model=oModel.get_booster()) 
+                        oModel.fit(X_batch_final, np.ravel(y_batch_final), xgb_model=oModel.get_booster())
                 
                 wasdi.wasdiLog(f"Batch {int(i/BATCH_SIZE)+1} trained on {len(X_batch_final):,} Augmented ZONES.")
                 del df_batch, X_base, y_base, X_down, X_up, X_batch_final, y_batch_final 
 
-            if bSaveBaselineModel:
-                sOutModelName = f"{sBasenamefloodmap}_zonal_baseline_model.joblib"
-                joblib.dump(oModel, wasdi.getPath(sOutModelName))
-                wasdi.addFileToWASDI(sOutModelName)
+            # --- SAVE THE MODEL ---
+            if bSaveBaselineModel and len(asTrainParquetFiles) > 0:
+                
+                # Determine the save name
+                if sModelBaselineJoblib != "":
+                    # Use the user's custom name, ensuring it has the right extension
+                    sSaveName = sModelBaselineJoblib if sModelBaselineJoblib.endswith(".joblib") else f"{sModelBaselineJoblib}.joblib"
+                else:
+                    # The Default Naming Convention
+                    sSaveName = f"{sBasenamefloodmap}_zonal_baseline_model.joblib"
+                    
+                joblib.dump(oModel, wasdi.getPath(sSaveName))
+                wasdi.addFileToWASDI(sSaveName)
+                wasdi.wasdiLog(f"Successfully saved AI model as: {sSaveName}")
         else:
             wasdi.wasdiLog("Training skipped (Test Mode Active).")
 
