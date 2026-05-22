@@ -16,7 +16,7 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 
 #### Required
 
-* `BASENAME_FLOODMAP`: The common prefix string identifying the target flood maps in your workspace (e.g., `"PWThies"`).
+* `BASENAME_FLOODMAP`: The common prefix string identifying the target flood maps in your workspace (e.g., `"Thies"`).
 * `SUFFIX_FLOODMAP`: The suffix string identifying the target flood maps (e.g., `"_flood.tif"`).
 * `BASENAME_IMERG`: The common prefix string identifying the cumulative rainfall maps (e.g., `"Thies_Cumulative_"`).
 * `DEM`: The exact filename of the Digital Elevation Model in your workspace (e.g., `"Thies_DEM15m.tif"`).
@@ -30,8 +30,8 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 * `START_MAP_INDEX` (defaults to `1`): The numerical index of the first map to process in the workspace list.
 * `END_MAP_INDEX` (defaults to `""` / `null`): The numerical index of the last map to process. 
 * `ALGORITHM` (defaults to `"XGBoost"`): The machine learning algorithm to deploy. Accepts `"XGBoost"`, `"RF"`, or `"Random Forest"`.
-* `BASELINE_MODEL` (defaults to `""`): The filename of a pre-trained `.joblib` model. Required for Testing/Operational Mode, and used in Training Mode to incrementally update an existing brain.
-* `SAVE_BASELINE_MODEL` (defaults to `false`): Set to `true` to export the trained `.joblib` model to the workspace.
+* `BASELINE_MODEL` (defaults to `""`): The filename of the `.joblib` model. If the file exists, it is loaded for Testing/Operational mode or incremental Training. **If the file does not exist, a fresh model is initialized and will be saved under this custom name** (if saving is enabled).
+* `SAVE_BASELINE_MODEL` (defaults to `false`): Set to `true` to export the trained `.joblib` model to the workspace. If `BASELINE_MODEL` contains a custom name, the model will be saved using that name.
 * `THRESHOLD` (defaults to `0.25`): The probability threshold used specifically for generating confusion matrix metrics in the JSON payload. 
 * `LIST_MAPS_WITH_FLOOD` (defaults to `""`): The filename of a text list specifying exact flood maps to use.
 * `OUTPUT_FILENAME` (defaults to `""`): The custom name for the exported prediction map. If left blank, defaults to `{BASENAME}_{DATE}_PredictedFlood.tif`.
@@ -69,7 +69,7 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 * **Test Set Metrics (Threshold X)**: Generates the Confusion Matrix results alongside advanced operational scores (**Precision, Recall, F1-Score**). *Only generated during Historical Testing Mode*.
 
 **Workspace Files**:
-* **Cached Model**: `{BASENAME_FLOODMAP}_zonal_baseline_model.joblib`
+* **Cached Model**: Saved as the custom name provided in `BASELINE_MODEL`, or defaults to `{BASENAME_FLOODMAP}_zonal_baseline_model.joblib`.
 * **Predicted Flood Map**: A structured 2D array projected back to the original map boundaries: `{BASENAME}_{DATE}_PredictedFlood.tif` (Float32 Probabilities).
 * **Hydrology Maps**: Newly generated TWI/HAND maps (if requested).
 
@@ -78,7 +78,7 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 Operational Forecast Example
 ```json
 {
-  "BASENAME_FLOODMAP": "PWThies",
+  "BASENAME_FLOODMAP": "Thies",
   "SUFFIX_FLOODMAP": "_flood.tif",
   "BASENAME_IMERG": "Thies_Cumulative_",
   "DEM": "Thies_DEM15m.tif",
