@@ -17,7 +17,7 @@ import glob
 
 def run():
 
-    wasdi.wasdiLog("START: Flood Forecaster Zonal v.2.0.8")
+    wasdi.wasdiLog("START: Flood Forecaster Zonal v.2.0.9")
     aoPayload = {}
 
     try:
@@ -58,7 +58,7 @@ def run():
         iEndMap = int(iEndMapRaw) if iEndMapRaw not in ["", None] else None
         
         fThresholdRaw = wasdi.getParameter("THRESHOLD", None)
-        fThreshold = float(fThresholdRaw) if fThresholdRaw not in ["", None] else 0.5
+        fThreshold = float(fThresholdRaw) if fThresholdRaw not in ["", None] else 0.35
         sListMapsWithFloodTxt = wasdi.getParameter("LIST_MAPS_WITH_FLOOD", "") 
         sAlgorithmRaw = wasdi.getParameter("ALGORITHM", "XGBoost")
         sAlgorithm = str(sAlgorithmRaw).strip().lower() if sAlgorithmRaw else "xgboost"
