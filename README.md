@@ -6,11 +6,11 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 
 * **Zonal Aggregation (Spatial Compression)**: Compresses raw 15m pixels into customizable zones (default ~495m). It uses a mathematical `'max'` aggregation for flood tracking, ensuring severe localized floods are never diluted, drastically reducing spatial noise and false alarms.
 * **Physics-Aware Algorithm (Monotonic Constraints)**: Handcuffs the model to the laws of hydrology. It forces the XGBoost algorithm to recognize that more rain must always increase risk, while higher elevation must always decrease it, making "dry valley" hallucinations mathematically impossible.
-* **Physically-Backed Failsafes**: Implements a strict 10.0mm 24-hour rainfall threshold. If a zone receives less than 10mm of rain, topographic interaction features are mathematically zeroed out, and the model is completely bypassed, saving compute time.
-* **Smart Training via Hard Negative Mining**: Automatically extracts 100% of flooded zones and balances the batch with dry zones at a 10:1 ratio. It intentionally sorts and feeds the model "trick questions" (the deepest, wettest-looking dry valleys) so the model explicitly learns the boundary between safety and danger.
+* **Physically-Backed Failsafes**: Implements a strict 10.0mm 24-hour rainfall threshold. If a zone receives less than 10mm of rain, topographic interaction features are automatically zeroed out, and the machine learning model is completely bypassed, saving compute time.
+* **Smart Training via Hard Negative Mining**: Extracts 100% of flooded zones from the archive and pairs them with dry zones at a global 10:1 ratio. The non-flooded sample is dynamically composed of 30% true hard negatives (the deep, wet valleys sorted by TWI/HAND) and 70% random background fields, teaching the model the exact physical boundary between safety and disaster.
 * **Data Augmentation (Jittering)**: Automatically triplicates the training data by creating ±20% meteorological variance scenarios, stress-testing the model against erratic weather patterns.
 * **Operational Forecast Mode**: Instantly toggle from historical testing to future forecasting. The app automatically fetches and cumulates real-time GFS weather data for a targeted future datetime.
-* **Parquet Caching**: Extracted hydrological and meteorological data is securely saved as temporary `.parquet` files using the `fastparquet` engine. Subsequent runs intelligently skip heavy GDAL warping phases, and integrated garbage collection prevents server RAM crashes, drastically reducing compute time.
+* **Parquet Caching**: Extracted hydrological and meteorological data is securely saved as temporary `.parquet` files using the `fastparquet` engine. Subsequent runs intelligently skip heavy GDAL warping phases, reducing processing latency.
 
 ### Parameters
 
@@ -22,49 +22,54 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 * `DEM`: The exact filename of the Digital Elevation Model in your workspace (e.g., `"Thies_DEM15m.tif"`).
 
 #### Operational, Batching & ML
-* `ZONE_SIZE_PIXELS` (defaults to `33`): Defines the size of the aggregation block. (e.g., 33 pixels * 15m resolution = 495m zones).
+
+* `ZONE_SIZE_PIXELS` (defaults to `33`): Defines the size of the aggregation block (e.g., 33 pixels * 15m resolution = 495m zones).
 * `TEST_DATE` (defaults to `""`): The exact date (YYYY-MM-DD) to test. If provided, the app enters **Testing Mode**. If blank, the app enters **Training Mode**.
 * `OPERATIONAL` (defaults to `false`): Set to `true` to activate real-time forecasting. The app will fetch GFS data instead of historical IMERG.
 * `FORECAST_DATETIME` (defaults to `""`): Required if `OPERATIONAL` is true. The exact target time for the forecast (e.g., `"2026-04-12 12:00"`).
-* `REPROCESS_ALL` (defaults to `false`): Set to `true` to force the app to overwrite existing Parquet cache files and re-warp the raw GeoTIFFs. (Automatically set to `true` in Operational mode, or when recovering from a corrupted cache).
+* `REPROCESS_ALL` (defaults to `false`): Set to `true` to force the app to overwrite existing Parquet cache files and re-warp the raw GeoTIFFs. (Automatically set to `true` in Operational mode).
 * `START_MAP_INDEX` (defaults to `1`): The numerical index of the first map to process in the workspace list.
-* `END_MAP_INDEX` (defaults to `""` / `null`): The numerical index of the last map to process. 
+* `END_MAP_INDEX` (defaults to `""` / `null`): The numerical index of the last map to process.
 * `ALGORITHM` (defaults to `"XGBoost"`): The machine learning algorithm to deploy. Accepts `"XGBoost"`, `"RF"`, or `"Random Forest"`.
-* `BASELINE_MODEL` (defaults to `""`): The filename of the `.joblib` model. If the file exists, it is loaded for Testing/Operational mode or incremental Training. **If the file does not exist, a fresh model is initialized and will be saved under this custom name** (if saving is enabled).
-* `SAVE_BASELINE_MODEL` (defaults to `false`): Set to `true` to export the trained `.joblib` model to the workspace. If `BASELINE_MODEL` contains a custom name, the model will be saved using that name.
-* `THRESHOLD` (defaults to `0.25`): The probability threshold used specifically for generating confusion matrix metrics in the JSON payload. 
+* `BASELINE_MODEL` (defaults to `""`): The filename of the `.joblib` model. If the file exists, it is loaded for Testing/Operational mode or incremental Training. **If the file does not exist, a fresh model is initialized and will be saved under this custom name**.
+* `SAVE_BASELINE_MODEL` (defaults to `false`): Set to `true` to export the trained `.joblib` model to the workspace.
+* `THRESHOLD` (defaults to `0.35`): The probability threshold used specifically for generating confusion matrix metrics in the JSON payload.
 * `LIST_MAPS_WITH_FLOOD` (defaults to `""`): The filename of a text list specifying exact flood maps to use.
 * `OUTPUT_FILENAME` (defaults to `""`): The custom name for the exported prediction map. If left blank, defaults to `{BASENAME}_{DATE}_PredictedFlood.tif`.
 
 #### Hydrology & LULC
+
 * `COMPUTE_TWI` (defaults to `false`): Set to `true` to calculate the Topographic Wetness Index from the DEM.
-* `TWI_MAP` (defaults to `""`): The filename of a pre-computed TWI map in the workspace. 
+* `TWI_MAP` (defaults to `""`): The filename of a pre-computed TWI map in the workspace.
 * `COMPUTE_HAND` (defaults to `false`): Set to `true` to calculate Height Above Nearest Drainage from the DEM.
-* `HAND_MAP` (defaults to `""`): The filename of a pre-computed HAND map in the workspace. 
+* `HAND_MAP` (defaults to `""`): The filename of a pre-computed HAND map in the workspace.
 * `MIN_ACC_VALUE_HAND` (defaults to `200`): The flow accumulation threshold used to define drainage channels.
 * `FILL_DEM` (defaults to `true`): Set to `true` to fill sinks in the DEM prior to computing hydrology features.
-* `LULC_MAP` (defaults to `"Thies_LULC.tif"`): The filename of the Land Use Land Cover map. The app automatically performs one-hot encoding on ESA standard classes.
+* `LULC_MAP` (defaults to `"Thies_LULC.tif"`): The filename of the Land Use Land Cover map.
 
 ### How to Run: Training vs. Testing
 
 **1. Training Mode (Building the Brain)**
+
 * Set `"TEST_DATE": ""` and `"OPERATIONAL": false`.
-* Set `"SAVE_BASELINE_MODEL": true`. 
-* *Result*: The app ingests the historical maps, trains the physics-aware model on the aggregated zones, and saves the resulting model as `{BASENAME_FLOODMAP}_zonal_baseline_model.joblib`. 
+* Set `"SAVE_BASELINE_MODEL": true`.
+* *Result*: The app ingests the historical maps, trains the physics-aware model on the aggregated zones, and saves the resulting model as `{BASENAME_FLOODMAP}_zonal_baseline_model.joblib`.
 
 **2. Historical Testing Mode (Inference & Evaluation)**
+
 * Set `"TEST_DATE"` to your target date (e.g., `"2020-09-12"`).
 * Provide the name of your trained model in `"BASELINE_MODEL"`.
 * *Result*: The app skips training, extracts data exclusively for the test date, evaluates it, and exports a 2D probability heatmap alongside performance metrics.
 
 **3. Operational Forecast Mode**
+
 * Set `"OPERATIONAL": true` and provide a `"FORECAST_DATETIME"`.
 * Provide your `"BASELINE_MODEL"`.
 * *Result*: The app reaches out to the GFS Cumulator, builds the future meteorological arrays, and outputs the predictive Zonal Heatmap for the target datetime.
 
 ### Output Files:
 
-**Payload Data**: 
+**Payload Data**:
 * **Feature Importance**: A dictionary ranking how heavily the model relied on each input variable.
 * **Test Set Metrics (Threshold X)**: Generates the Confusion Matrix results alongside advanced operational scores (**Precision, Recall, F1-Score**). *Only generated during Historical Testing Mode*.
 
@@ -85,17 +90,17 @@ Operational Forecast Example
   "COMPUTE_TWI": false,
   "TWI_MAP": "Thies_DEM15m_TWI.tif",
   "COMPUTE_HAND": false,
-  "HAND_MAP": "Thies_DEM15m_HAND.tif",
+  "HAND_MAP": "Thies_HAND15m_cropped.tif",
   "MIN_ACC_VALUE_HAND": 800,
   "LULC_MAP": "Thies_LULC.tif",
   "FILL_DEM": false,
   "ZONE_SIZE_PIXELS": 33,
   "ALGORITHM": "xgboost",
-  "THRESHOLD": 0.25,
+  "THRESHOLD": 0.35,
   "LIST_MAPS_WITH_FLOOD": "ListInputFloodMaps.txt",
   "START_MAP_INDEX": 1,
   "END_MAP_INDEX": null,
-  "BASELINE_MODEL": "PWThies_zonal_baseline_model.joblib",
+  "BASELINE_MODEL": "Thies_zonal_baseline_model.joblib",
   "SAVE_BASELINE_MODEL": false,
   "OPERATIONAL": true,
   "REPROCESS_ALL": false,
@@ -103,4 +108,5 @@ Operational Forecast Example
   "TEST_DATE": "",
   "OUTPUT_FILENAME": ""
 }
+
 ```
