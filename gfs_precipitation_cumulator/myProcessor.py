@@ -119,7 +119,7 @@ def convertRasterUnits(sInputFile, sOutputFile, fMultiplier):
 
 
 def run():
-    wasdi.wasdiLog('START: GFS Precipitation Cumulator v.1.2.2')
+    wasdi.wasdiLog('START: GFS Precipitation Cumulator v.1.2.3')
 
     # Read Parameters
     sBaseName = wasdi.getParameter("BASE_NAME", "CODE")
@@ -128,6 +128,9 @@ def run():
     sPeriods = wasdi.getParameter("CUMULATION_PERIODS", "1hr,3hr,6hr,12hr,24hr")
     bDelete = wasdi.getParameter("DELETE", True)
     sRunType = wasdi.getParameter("RUN_TYPE", "LAST")  # Default to "LAST" for production, can be overridden for testing
+    # HINDCAST PARAMETERS
+    bHindcastMode = wasdi.getParameter("HINDCASTING_MODE", False)
+    sExplicitSearchDate = wasdi.getParameter("SEARCH_DATE", "") 
 
     aoPayload = {'INPUT': wasdi.getParametersDict()}
     wasdi.setPayload(aoPayload)
@@ -155,38 +158,54 @@ def run():
     oEarliestNeededTime = oTargetTime - timedelta(hours=iMaxAccumulationHours)
     wasdi.wasdiLog(f"Earliest data hour required for accumulations: {oEarliestNeededTime}")
 
-    # To guarantee the GFS run covers oEarliestNeededTime, we must ensure the initialization date is AT LEAST the day of oEarliestNeededTime, or the day before if it's too early.    
-    # We step back 12 hours from the earliest needed time to find a safe search date.
-    # If we need data for 04:00 today, searching "yesterday" guarantees the '18' run  from yesterday will cover it perfectly.
-    oSafeInitializationTime = oEarliestNeededTime - timedelta(hours=12)
-    # --- Prevent future dates before calculating duration ---
-    oTodayUTC = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    oSafeMidnight = oSafeInitializationTime.replace(hour=0, minute=0, second=0, microsecond=0)
+    # --- HINDCAST OVERRIDE LOGIC ---
+    if bHindcastMode and sExplicitSearchDate:
+        wasdi.wasdiLog("HINDCAST MODE ACTIVE: Overriding dynamic date calculation.")
+        sSearchDate = sExplicitSearchDate
+        
+        # Calculate hours to target from the explicitly requested run
+        if sRunType != "LAST":
+            try:
+                # E.g., from "2026-02-09" and "06"
+                oExplicitInit = datetime.strptime(f"{sSearchDate} {sRunType}", "%Y-%m-%d %H")
+            except:
+                oExplicitInit = datetime.strptime(sSearchDate, "%Y-%m-%d")
+        else:
+            oExplicitInit = datetime.strptime(sSearchDate, "%Y-%m-%d")
+            
+        iHoursToTarget = math.ceil((oTargetTime - oExplicitInit).total_seconds() / 3600.0)
 
-    # If the safe date is tomorrow or later, force it to today so the math aligns with the fetcher
-    if oSafeMidnight > oTodayUTC:
-        wasdi.wasdiLog(f"Safe initialization date is in the future. Clamping back to today's run.")
-        oSafeMidnight = oTodayUTC
-        oSafeInitializationTime = oTodayUTC
-    # -----------------------------------------------------------------
+    else:
+        # --- NORMAL OPERATIONAL DYNAMIC CALCULATION ---
+        oSafeInitializationTime = oEarliestNeededTime - timedelta(hours=12)
+        oTodayUTC = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        oSafeMidnight = oSafeInitializationTime.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    sSearchDate = oSafeInitializationTime.strftime("%Y-%m-%d")
-    
-    # Now, calculate how many hours out we need to fetch from that safe date's midnight
-    iHoursToTarget = math.ceil((oTargetTime - oSafeMidnight).total_seconds() / 3600.0)
+        # Prevent future dates
+        if oSafeMidnight > oTodayUTC:
+            wasdi.wasdiLog("Safe initialization date is in the future. Clamping back to today's run.")
+            oSafeMidnight = oTodayUTC
+            oSafeInitializationTime = oTodayUTC
+
+        sSearchDate = oSafeInitializationTime.strftime("%Y-%m-%d")
+        iHoursToTarget = math.ceil((oTargetTime - oSafeMidnight).total_seconds() / 3600.0)
+    # ------------------------------------------------
 
     if iHoursToTarget <= 24:
         sDynamicDuration = "24hr"
     elif iHoursToTarget <= 48:
         sDynamicDuration = "48hr"
     elif iHoursToTarget <= 72:
-        sDynamicDuration = "72hr" 
-    else:
-        # Note: If target is >72 hours away, you will need a 96hr+ parameter in your fetcher!
-        wasdi.wasdiLog(f"WARNING: Target is {iHoursToTarget} hours out. Capping fetch duration at 72hr.")
         sDynamicDuration = "72hr"
+    elif iHoursToTarget <= 96:
+        sDynamicDuration = "96hr"
+    elif iHoursToTarget <= 120:
+        sDynamicDuration = "120hr"
+    else:
+        wasdi.wasdiLog(f"WARNING: Target is {iHoursToTarget} hours out. Capping fetch duration at 120hr. Ensure your fetcher supports this range!")
+        sDynamicDuration = "120hr"
 
-    wasdi.wasdiLog(f"Triggering GFS Fetcher for safe initialization date {sSearchDate}, fetching out to {sDynamicDuration}.")
+    wasdi.wasdiLog(f"Triggering GFS Fetcher for initialization date {sSearchDate}, fetching out to {sDynamicDuration}.")
     
     aoFetcherParams = {
         "BASE_NAME": sBaseName,
