@@ -10,7 +10,10 @@
             "lng": -17.6
         }
     },
-    "TARGET_DATETIME": "2026-03-19 16:00",
+    "TARGET_DATETIME": "2026-06-09 19:00",
     "CUMULATION_PERIODS": "1hr,3hr,6hr,12hr,24hr",
+    "HINDCASTING_MODE": true,
+    "RUN_TYPE": "06",
+    "SEARCH_DATE": "2026-06-08",
     "DELETE": true
 }
