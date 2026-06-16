@@ -17,7 +17,7 @@ import glob
 
 def run():
 
-    wasdi.wasdiLog("START: Flood Forecaster Zonal v.2.0.9")
+    wasdi.wasdiLog("START: Flood Forecaster Zonal v.2.1.0")
     aoPayload = {}
 
     try:
@@ -328,7 +328,7 @@ def run():
             # INTERACTION FEATURES WITH GATING
             if 'RainCum_24hr' in dfFloodInLoop.columns:
                 # The Gate: 1 if severe storm, 0 if dry/light rain
-                dfFloodInLoop['Is_Storm_Active'] = (dfFloodInLoop['RainCum_24hr'] >= 10.0).astype(int)
+                dfFloodInLoop['Is_Storm_Active'] = (dfFloodInLoop['RainCum_24hr'] >= 5.0).astype(int)
                 
                 if bUseHand:
                     dfFloodInLoop['Interaction_Rain24_HAND'] = (dfFloodInLoop['RainCum_24hr'] / (dfFloodInLoop['HAND'] + 1.0)) * dfFloodInLoop['Is_Storm_Active']
@@ -556,7 +556,7 @@ def run():
                 
                 # SYNCED FAILSAFE FOR METRICS 
                 bDryDay = False
-                if 'RainCum_24hr' in df_test_map.columns and df_test_map['RainCum_24hr'].max() < 10.0: # <--- Upgraded physically-backed threshold
+                if 'RainCum_24hr' in df_test_map.columns and df_test_map['RainCum_24hr'].max() < 5.0: # <--- Upgraded physically-backed threshold
                     bDryDay = True
 
                 if bDryDay:
@@ -568,7 +568,7 @@ def run():
                     # LOCAL ZONAL FAILSAFE
                     if 'RainCum_24hr' in df_test_map.columns:
                         afRain24_chunk = df_test_map['RainCum_24hr'].values
-                        y_pred_chunk[afRain24_chunk < 10.0] = 0.0 # <--- Upgraded physically-backed threshold
+                        y_pred_chunk[afRain24_chunk < 5.0] = 0.0 # <--- Upgraded physically-backed threshold
                     
                     y_pred_chunk_binary = (y_pred_chunk >= fThreshold).astype(int)
                     del X_test_chunk
@@ -617,7 +617,7 @@ def run():
                 bDryDay = False
                 if 'RainCum_24hr' in df_test_map.columns:
                     fMaxRain24h = df_test_map['RainCum_24hr'].max()
-                    if fMaxRain24h < 10.0: # <--- Upgraded physically-backed threshold
+                    if fMaxRain24h < 5.0: # <--- Upgraded physically-backed threshold
                         wasdi.wasdiLog(f"FAILSAFE TRIGGERED: Max 24h rain is only {fMaxRain24h:.2f}mm. Bypassing AI.")
                         bDryDay = True
 
@@ -630,7 +630,7 @@ def run():
                     if 'RainCum_24hr' in df_test_map.columns:
                         afRain24 = df_test_map['RainCum_24hr'].values
                         # Overwrite XGBoost: Force dry zones to strictly 0% risk
-                        y_pred_map[afRain24 < 10.0] = 0.0 # <--- Upgraded physically-backed threshold
+                        y_pred_map[afRain24 < 5.0] = 0.0 # <--- Upgraded physically-backed threshold
 
                     afZoneX = df_test_map['Zone_X'].values.astype(int)
                     afZoneY = df_test_map['Zone_Y'].values.astype(int)
