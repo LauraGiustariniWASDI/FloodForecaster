@@ -6,7 +6,7 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 
 * **Zonal Aggregation (Spatial Compression)**: Compresses raw 15m pixels into customizable zones (default ~495m). It uses a mathematical `'max'` aggregation for flood tracking, ensuring severe localized floods are never diluted, drastically reducing spatial noise and false alarms.
 * **Physics-Aware Algorithm (Monotonic Constraints)**: Handcuffs the model to the laws of hydrology. It forces the XGBoost algorithm to recognize that more rain must always increase risk, while higher elevation must always decrease it, making "dry valley" hallucinations mathematically impossible.
-* **Physically-Backed Failsafes**: Implements a strict 10.0mm 24-hour rainfall threshold. If a zone receives less than 10mm of rain, topographic interaction features are automatically zeroed out, and the machine learning model is completely bypassed, saving compute time.
+* **Physically-Backed Failsafes**: Implements a strict 5.0mm 24-hour rainfall threshold. If a zone receives less than 5.0mm of rain, topographic interaction features are automatically zeroed out, and the machine learning model is completely bypassed, saving compute time.
 * **Smart Training via Hard Negative Mining**: Extracts 100% of flooded zones from the archive and pairs them with dry zones at a global 10:1 ratio. The non-flooded sample is dynamically composed of 30% true hard negatives (the deep, wet valleys sorted by TWI/HAND) and 70% random background fields, teaching the model the exact physical boundary between safety and disaster.
 * **Data Augmentation (Jittering)**: Automatically triplicates the training data by creating ±20% meteorological variance scenarios, stress-testing the model against erratic weather patterns.
 * **Operational Forecast Mode**: Instantly toggle from historical testing to future forecasting. The app automatically fetches and cumulates real-time GFS weather data for a targeted future datetime.
@@ -70,10 +70,12 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 ### Output Files:
 
 **Payload Data**:
+
 * **Feature Importance**: A dictionary ranking how heavily the model relied on each input variable.
 * **Test Set Metrics (Threshold X)**: Generates the Confusion Matrix results alongside advanced operational scores (**Precision, Recall, F1-Score**). *Only generated during Historical Testing Mode*.
 
 **Workspace Files**:
+
 * **Cached Model**: Saved as the custom name provided in `BASELINE_MODEL`, or defaults to `{BASENAME_FLOODMAP}_zonal_baseline_model.joblib`.
 * **Predicted Flood Map**: A structured 2D array projected back to the original map boundaries: `{BASENAME}_{DATE}_PredictedFlood.tif` (Float32 Probabilities).
 * **Hydrology Maps**: Newly generated TWI/HAND maps (if requested).
@@ -81,6 +83,7 @@ The `flood_forecaster_zonal` processor is an advanced spatial machine learning p
 ### JSON Sample
 
 Operational Forecast Example
+
 ```json
 {
   "BASENAME_FLOODMAP": "Thies",
@@ -104,9 +107,7 @@ Operational Forecast Example
   "SAVE_BASELINE_MODEL": false,
   "OPERATIONAL": true,
   "REPROCESS_ALL": false,
-  "FORECAST_DATETIME": "2020-09-12 19:00",
+  "FORECAST_DATETIME": "2021-03-02 19:00",
   "TEST_DATE": "",
   "OUTPUT_FILENAME": ""
 }
-
-```
